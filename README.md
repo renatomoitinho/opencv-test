@@ -38,7 +38,7 @@ total time 14.526851ms
 
 > [Code in rust](https://github.com/renatomoitinho/opencv-test/blob/master/src/main.rs)
 
-> [Crates] (https://crates.io/crates/opencv)
+> [Crates](https://crates.io/crates/opencv)
 
 |input bytes| width x height| input format | output format | resize  | output bytes | time
 |--|--|--|--|--|--|--
