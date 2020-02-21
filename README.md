@@ -28,6 +28,9 @@ total time 14.526851ms
 4. Convert PNG transparent to white pixels
 5. compress in JPG
 
+
+![Figure](imgs/out.png "Input image sample!")   ![Figure](imgs/in.png "output image sample!")
+
 # opencv rust
 [code](https://github.com/renatomoitinho/opencv-test/blob/master/src/main.rs)
 
