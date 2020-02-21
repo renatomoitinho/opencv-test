@@ -16,8 +16,6 @@ pub struct ImageResize {
     pub horizontal_border: i32,
 }
 
-const WHITE_COLOR: f64 = 255 as f64;
-
 fn get_target_size(img_ref: core::Size, width: i32, height: i32) -> ImageResize {
     let radio: f32 = min(width as f32 / img_ref.width as f32, height as f32 / img_ref.height as f32);
     let mut new_width: i32 = (img_ref.width as f32 * radio) as i32;
@@ -104,10 +102,14 @@ fn get_jpeg_buffer(image: &core::Mat) -> VectorOfuchar {
 
 pub fn expand(src: &core::Mat, resize: ImageResize) -> Result<core::Mat, opencv::Error> {
     let mut result = core::Mat::default()?;
-
-    core::copy_make_border(src, &mut result, resize.vertical_border, resize.vertical_border,
-                           resize.horizontal_border, resize.horizontal_border, core::BORDER_CONSTANT,
-                           core::Scalar::all(WHITE_COLOR))
+    core::copy_make_border(src, 
+        &mut result, 
+        resize.vertical_border, 
+        resize.vertical_border,                   
+        resize.horizontal_border, 
+        resize.horizontal_border, 
+        core::BORDER_CONSTANT,
+        core::Scalar::all(255.0))
         .expect("not load buffer");
     Ok(result)
 }
@@ -119,20 +121,17 @@ fn is_alpha_channel(src: &core::Mat) -> Result<bool, opencv::Error> {
 }
 
 fn change_alpha_channels(src: &core::Mat) -> Result<core::Mat, opencv::Error> {
+    
     let mut split = VectorOfMat::new();
-
     // split channels
     core::split(&src, &mut split)?;
     // set alpha
     let mut alpha = VectorOfMat::with_capacity(1);
     alpha.push(split.get(3)?);
-
     // remove alpha
     split.remove(3)?;
-
     let mut image = core::Mat::default()?;
     let mut alpha_image = core::Mat::default()?;
-
     // merge
     core::merge(&split, &mut image)?;
     core::merge(&alpha, &mut alpha_image)?;
@@ -155,7 +154,6 @@ fn change_alpha_channels(src: &core::Mat) -> Result<core::Mat, opencv::Error> {
     Ok(result)
 }
 
-
 fn main() {
     let args: Vec<String> = env::args().collect();
     // Init params
@@ -169,7 +167,11 @@ fn main() {
     let mut image = read_image(&buffer[..]).unwrap();
     let is_alpha = is_alpha_channel(&image).unwrap();
 
-    println!("time to read image from buffer alpha={:?} w={:?} h={:?} time={:?}", is_alpha, image.cols(), image.rows(), start.elapsed());
+    println!("time to read image from buffer alpha={:?} w={:?} h={:?} time={:?}", 
+            is_alpha, 
+            image.cols(), 
+            image.rows(), 
+            start.elapsed());
 
     // Resize
     start = Instant::now();
@@ -181,26 +183,41 @@ fn main() {
         square,
         square,
     );
-    image = image_resize(&image, core::Size { width: positions.width, height: positions.height }).unwrap();
-    println!("time to resize w={:?} h={:?} time={:?}", image.cols(), image.rows(), start.elapsed());
+    image = image_resize(&image, 
+        core::Size { 
+            width: positions.width, 
+            height: positions.height 
+        }).unwrap();
+    println!("time to resize w={:?} h={:?} time={:?}", 
+            image.cols(), 
+            image.rows(), 
+            start.elapsed());
 
     // Extend
     if image.cols().unwrap() != image.rows().unwrap() {
         start = Instant::now();
         image = expand(&image, positions).unwrap();
-        println!("time to extend time  w={:?} h={:?} time={:?}", image.cols(), image.rows(), start.elapsed());
+        println!("time to extend time  w={:?} h={:?} time={:?}", 
+                image.cols(), 
+                image.rows(), 
+                start.elapsed());
     }
 
     if is_alpha {
         start = Instant::now();
         image = change_alpha_channels(&image).unwrap();
-        println!("time to remove alpha time  w={:?} h={:?} time={:?}", image.cols(), image.rows(), start.elapsed());
+        println!("time to remove alpha time  w={:?} h={:?} time={:?}", 
+                image.cols(), 
+                image.rows(), 
+                start.elapsed());
     }
     
     // Read Buffer
     start = Instant::now();
     let buffer = get_jpeg_buffer(&image);
-    println!("time to read buffer size={:?} time={:?}", buffer.len(), start.elapsed());
+    println!("time to read buffer size={:?} time={:?}", 
+            buffer.len(), 
+            start.elapsed());
     println!("total time {:?}", start_total.elapsed());
     
     // Only write
@@ -210,5 +227,7 @@ fn main() {
         .unwrap()
         .to_str()
         .unwrap())));
-    println!("time to write disk size={:?} time={:?}", buffer.len(), start.elapsed());
+    println!("time to write disk size={:?} time={:?}", 
+            buffer.len(), 
+            start.elapsed());
 }
