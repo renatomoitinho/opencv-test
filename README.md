@@ -29,7 +29,9 @@ total time 14.526851ms
 5. compress in JPG
 
 
-![Figure](imgs/out.png "Input image sample!")   ![Figure](imgs/in.png "output image sample!")
+> ![Figure](imgs/out.png "Input image sample!")   ![Figure](imgs/in.png "output image sample!")
+
+> ![Figure2](imgs/tree_in.png) ![Figure2](imgs/tree_out.png)
 
 # opencv rust
 [code](https://github.com/renatomoitinho/opencv-test/blob/master/src/main.rs)
