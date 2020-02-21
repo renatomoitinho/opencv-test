@@ -1,6 +1,7 @@
 # Opencv Test
 
 Install [opencv](https://docs.opencv.org/trunk/d7/d9f/tutorial_linux_install.html)
+
 Install [cargo](https://www.rust-lang.org/tools/install)
  
 ## Clone project
@@ -50,7 +51,11 @@ total time 14.526851ms
 ## So info
 
 **Ubuntu 18.04.4 LTS**
+
 **memory:** 15,4 GiB
+
 **processor:** Intel® Core™ i7-6500U CPU @ 2.50GHz × 4 
- **Graphics:** Intel® HD Graphics 520 (Skylake GT2)
- **Os type:** 64-bit
+
+**Graphics:** Intel® HD Graphics 520 (Skylake GT2)
+
+**Os type:** 64-bit
