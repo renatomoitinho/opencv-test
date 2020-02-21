@@ -123,7 +123,6 @@ fn change_alpha_channels(src: &core::Mat) -> Result<core::Mat, opencv::Error> {
 
     // split channels
     core::split(&src, &mut split)?;
-
     // set alpha
     let mut alpha = VectorOfMat::with_capacity(1);
     alpha.push(split.get(3)?);
@@ -159,18 +158,15 @@ fn change_alpha_channels(src: &core::Mat) -> Result<core::Mat, opencv::Error> {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-
     // Init params
     let path: &Path = Path::new(args[1].as_str());
     let square: i32 = args[2].parse().unwrap();
     let buffer = read_file(path);
-
     let start_total = Instant::now();
     let mut start = Instant::now();
-
+    
     // Load image
     let mut image = read_image(&buffer[..]).unwrap();
-
     let is_alpha = is_alpha_channel(&image).unwrap();
 
     println!("time to read image from buffer alpha={:?} w={:?} h={:?} time={:?}", is_alpha, image.cols(), image.rows(), start.elapsed());
@@ -200,13 +196,13 @@ fn main() {
         image = change_alpha_channels(&image).unwrap();
         println!("time to remove alpha time  w={:?} h={:?} time={:?}", image.cols(), image.rows(), start.elapsed());
     }
-
+    
     // Read Buffer
     start = Instant::now();
     let buffer = get_jpeg_buffer(&image);
     println!("time to read buffer size={:?} time={:?}", buffer.len(), start.elapsed());
     println!("total time {:?}", start_total.elapsed());
-
+    
     // Only write
     start = Instant::now();
     write_file_in_disk(&buffer, path.parent().unwrap().join(format!("out_{}_opencv.jpeg", path
