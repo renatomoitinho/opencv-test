@@ -33,9 +33,12 @@ total time 14.526851ms
 > ![Figure2](imgs/tree_in.png) ![Figure2](imgs/tree_out.png)
 
 # Benchmark
-## opencv rust
+## Opencv rust
 > [Lib](https://opencv.org/)
+
 > [Code in rust](https://github.com/renatomoitinho/opencv-test/blob/master/src/main.rs)
+
+> [Crates] (https://crates.io/crates/opencv)
 
 |input bytes| width x height| input format | output format | resize  | output bytes | time
 |--|--|--|--|--|--|--
@@ -47,7 +50,10 @@ total time 14.526851ms
 
 ## Libvips rust
 > [Lib](https://github.com/libvips/libvips)
+
 > [Code in rust](https://github.com/renatomoitinho/vips-test/blob/master/src/main.rs)
+
+> [Crates](https://crates.io/crates/libvips)
 
 |input bytes| width x height| input format | output format | resize  | output bytes | time (ms)
 |--|--|--|--|--|--|--
@@ -59,6 +65,7 @@ total time 14.526851ms
 
 ## Imagemagick (converter)
 > [Lib](https://www.imagemagick.org)
+
 > [code](https://imagemagick.org/script/convert.php)
 
 |input bytes| width x height| input format | output format | resize  | output bytes | time (ms)
