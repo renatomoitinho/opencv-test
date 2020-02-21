@@ -29,7 +29,7 @@ total time 14.526851ms
 5. compress in JPG
 
 # opencv rust
-[code]([https://github.com/renatomoitinho/opencv-test/blob/master/src/main.rs](https://github.com/renatomoitinho/opencv-test/blob/master/src/main.rs))
+[code](https://github.com/renatomoitinho/opencv-test/blob/master/src/main.rs)
 
 |input bytes| width x height| input format | output format | resize  | output bytes | time
 |--|--|--|--|--|--|--
@@ -39,7 +39,7 @@ total time 14.526851ms
 | 190.6Kb | 500x500 | PNG | JPG | 400x400 |39.8Kb | 15.5ms
 
 # Libvips rust
-[code]([https://github.com/renatomoitinho/vips-test/blob/master/src/main.rs](https://github.com/renatomoitinho/vips-test/blob/master/src/main.rs))
+[code](https://github.com/renatomoitinho/vips-test/blob/master/src/main.rs)
 
 |input bytes| width x height| input format | output format | resize  | output bytes | time (ms)
 |--|--|--|--|--|--|--
