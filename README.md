@@ -70,9 +70,9 @@ total time 14.526851ms
 
 |input bytes| width x height| input format | output format | resize  | output bytes | time
 |--|--|--|--|--|--|--
-| 5.7MB | 4000x6000 | PNG | JPG | 1080x1080| 67.7Kb | 3,4s
+| 5.7MB | 4000x6000 | PNG | JPG | 1080x1080| 67.7Kb | 3.4s
 | 529Kb | 789x789 | PNG | JPG | 700x700| 58.4Kb| 433ms
-| 3.3MB | 2000x1614 | PNG | JPG | 1080x1080 |257.7Kb| 1,09s 
+| 3.3MB | 2000x1614 | PNG | JPG | 1080x1080 |257.7Kb| 1.09s 
 | 190.6Kb | 500x500 | PNG | JPG | 400x400 |35.6Kb | 191ms
 ||||||419.4Kb|5.11s
 
