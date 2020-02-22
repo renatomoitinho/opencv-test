@@ -55,7 +55,7 @@ total time 14.526851ms
 
 > [Crates](https://crates.io/crates/libvips)
 
-|input bytes| width x height| input format | output format | resize  | output bytes | time (ms)
+|input bytes| width x height| input format | output format | resize  | output bytes | time
 |--|--|--|--|--|--|--
 | 5.7MB | 4000x6000 | PNG | JPG | 1080x1080| 54.8Kb | 1.13s
 | 529Kb | 789x789 | PNG | JPG | 700x700| 50.6Kb| 88ms
@@ -68,7 +68,7 @@ total time 14.526851ms
 
 > [code](https://imagemagick.org/script/convert.php)
 
-|input bytes| width x height| input format | output format | resize  | output bytes | time (ms)
+|input bytes| width x height| input format | output format | resize  | output bytes | time
 |--|--|--|--|--|--|--
 | 5.7MB | 4000x6000 | PNG | JPG | 1080x1080| 67.7Kb | 3,4s
 | 529Kb | 789x789 | PNG | JPG | 700x700| 58.4Kb| 433ms
