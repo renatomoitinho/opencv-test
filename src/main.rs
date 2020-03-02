@@ -1,57 +1,21 @@
 use std::{env, fs};
 use std::fs::File;
 use std::io::prelude::*;
-use std::path::{Path, PathBuf};
-use std::time::Instant;
-
+use std::path::Path;
+use std::time::{Instant, Duration};
 use opencv::{core, imgcodecs, imgproc};
 use opencv::prelude::Vector;
 use opencv::types::{VectorOfint, VectorOfMat, VectorOfuchar};
-
-#[derive(Debug, Clone, Copy)]
-pub struct ImageResize {
-    pub width: i32,
-    pub height: i32,
-    pub vertical_border: i32,
-    pub horizontal_border: i32,
-}
-
-fn get_target_size(img_ref: core::Size, width: i32, height: i32) -> ImageResize {
-    let radio: f32 = min(width as f32 / img_ref.width as f32, height as f32 / img_ref.height as f32);
-    let mut new_width: i32 = (img_ref.width as f32 * radio) as i32;
-    let mut new_height: i32 = (img_ref.height as f32 * radio) as i32;
-    let mut v_border = 0;
-    let mut h_border = 0;
-
-    if new_height > new_width {
-        let border: f32 = (new_height - new_width) as f32 / 2.0;
-        h_border = border as i32;
-        new_width += (border as i32 % 1) * 2;
-    } else if new_width > new_height {
-        let border: f32 = (new_width - new_height) as f32 / 2.0;
-        v_border = { border as i32 };
-        new_height += ((border as i32) % 1) * 2;
-    } else {
-        v_border = 0;
-        h_border = 0;
-    }
-
-    ImageResize {
-        width: new_width,
-        height: new_height,
-        vertical_border: v_border,
-        horizontal_border: h_border,
-    }
-}
+use regex::Regex;
 
 fn min(n1: f32, n2: f32) -> f32 {
-    if n1 < n2 {
-        n1
-    } else if n2 < n1 {
-        n2
-    } else {
-        n1
+    if n1 == n2 {
+        return n1;
     }
+    if n1 < n2 {
+        return n1;
+    }
+    return n2;
 }
 
 fn read_file(path: &Path) -> Vec<u8> {
@@ -60,23 +24,29 @@ fn read_file(path: &Path) -> Vec<u8> {
 
 fn read_image(buffer: &[u8]) -> Result<core::Mat, opencv::Error> {
     let src = core::Mat::from_slice(buffer)?;
-    let dest = imgcodecs::imdecode(&src, imgcodecs::IMREAD_UNCHANGED)?;
+    let target = imgcodecs::imdecode(&src, imgcodecs::IMREAD_UNCHANGED)?;
 
-    Ok(dest)
+    Ok(target)
 }
 
-fn write_file_in_disk(buffer: &VectorOfuchar, path: PathBuf) -> () {
-    let mut _file = File::create(path).expect("Error create file");
+fn write_file_in_disk(buffer: &VectorOfuchar, path: &Path, prefix: &str) -> () {
+    let re = Regex::new(r"^(.*?)\..*$").unwrap();
+    let result = re.replace_all(path.file_name().unwrap().to_str().unwrap(), "$1");
+
+    let mut _file = File::create(path.parent().unwrap().join(format!("{}_rust_{}.jpg", result.as_ref(), prefix).as_str())).expect("Error create file");
     _file.write(buffer.to_slice()).expect("no write");
     _file.flush().expect("no flush");
 }
 
-fn image_resize(image: &core::Mat, size: core::Size) -> Result<core::Mat, opencv::Error> {
+fn image_resize(image: &core::Mat, width: i32, height: i32) -> Result<core::Mat, opencv::Error> {
     let mut result = core::Mat::default()?;
     imgproc::resize(
         image,
         &mut result,
-        size,
+        core::Size {
+            width,
+            height,
+        },
         0f64,
         0f64,
         imgproc::INTER_AREA,
@@ -84,12 +54,8 @@ fn image_resize(image: &core::Mat, size: core::Size) -> Result<core::Mat, opencv
     Ok(result)
 }
 
-fn get_jpeg_buffer(image: &core::Mat) -> VectorOfuchar {
-    let mut dest = VectorOfuchar::new();
-    let mut quality = VectorOfint::with_capacity(2);
-    quality.push(90);
-    quality.push(imgcodecs::IMWRITE_JPEG_QUALITY);
-
+fn get_jpeg_buffer(image: &core::Mat, quality: &VectorOfint) -> VectorOfuchar {
+    let mut dest: VectorOfuchar = VectorOfuchar::new();
     imgcodecs::imencode(
         ".jpg",
         &image,
@@ -100,40 +66,35 @@ fn get_jpeg_buffer(image: &core::Mat) -> VectorOfuchar {
     dest
 }
 
-pub fn expand(src: &core::Mat, resize: ImageResize) -> Result<core::Mat, opencv::Error> {
+fn fill(src: &core::Mat, vertical_border: i32, horizontal_border: i32) -> Result<core::Mat, opencv::Error> {
     let mut result = core::Mat::default()?;
-    core::copy_make_border(src, 
-        &mut result, 
-        resize.vertical_border, 
-        resize.vertical_border,                   
-        resize.horizontal_border, 
-        resize.horizontal_border, 
-        core::BORDER_CONSTANT,
-        core::Scalar::all(255.0))
-        .expect("not load buffer");
+    core::copy_make_border(src,
+                           &mut result,
+                           vertical_border,
+                           vertical_border,
+                           horizontal_border,
+                           horizontal_border,
+                           core::BORDER_CONSTANT,
+                           core::Scalar::all(255.0))?;
     Ok(result)
 }
 
-fn is_alpha_channel(src: &core::Mat) -> Result<bool, opencv::Error> {
-    let mut split = VectorOfMat::new();
-    core::split(&src, &mut split)?;
-    Ok(split.len() == 4)
-}
-
-fn change_alpha_channels(src: &core::Mat) -> Result<core::Mat, opencv::Error> {
-    
-    let mut split = VectorOfMat::new();
-    // split channels
-    core::split(&src, &mut split)?;
+fn change_alpha_channels(split: &mut VectorOfMat) -> Result<core::Mat, opencv::Error> {
     // set alpha
     let mut alpha = VectorOfMat::with_capacity(1);
     alpha.push(split.get(3)?);
     // remove alpha
     split.remove(3)?;
+
+    let mut colors = VectorOfMat::with_capacity(3);
+    colors.push(split.get(0)?);
+    colors.push(split.get(1)?);
+    colors.push(split.get(2)?);
+
     let mut image = core::Mat::default()?;
     let mut alpha_image = core::Mat::default()?;
     // merge
-    core::merge(&split, &mut image)?;
+    core::merge(&colors, &mut image)?;
     core::merge(&alpha, &mut alpha_image)?;
 
     let mut bit_not = core::Mat::default()?;
@@ -151,83 +112,132 @@ fn change_alpha_channels(src: &core::Mat) -> Result<core::Mat, opencv::Error> {
     core::bitwise_and(&image, &image, &mut bit_and, &alpha_image)?;
     core::add(&bit_and, &bit_not_dest, &mut result, &empty_mat, 0)?;
 
+    alpha.clear();
+    colors.clear();
+
+    image.release()?;
+    alpha_image.release()?;
+    bit_not.release()?;
+    bit_and.release()?;
+    bit_not_dest.release()?;
+
     Ok(result)
+}
+
+fn verify_params(params: &Vec<String>) -> bool {
+    if params.len() < 3 {
+        println!("Illegal arguments was expected image path and size\n\
+        Example: /home/user/Pictures/image.jpg 700");
+        return false;
+    }
+    return true;
+}
+
+fn get_sizes(params: &Vec<String>, index: usize) -> Vec<f32> {
+    let mut sizes: Vec<f32> = params.into_iter()
+        .skip(index)
+        .map(|s| s.parse::<f32>().unwrap())
+        .rev()
+        .collect();
+    sizes.sort_by(|a, b| b.partial_cmp(a).unwrap());
+    sizes
+}
+
+fn get_channel(src: &core::Mat) -> Result<VectorOfMat, opencv::Error> {
+    let mut split = VectorOfMat::new();
+    core::split(&src, &mut split)?;
+    Ok(split)
+}
+
+fn get_target_new_size(square: &f32, src: &core::Mat) -> (i32, i32, i32, i32) {
+    let (width, height) = (src.cols().unwrap() as f32, src.rows().unwrap() as f32);
+    let radio: f32 = min(square / width, square / height);
+    let (mut new_width, mut new_height) = ((width * radio), (height * radio));
+    let (mut v_border, mut h_border) = (0, 0);
+    let border;
+
+    if new_height == new_width {
+        return (new_width as i32, new_height as i32, v_border, h_border);
+    }
+
+    if new_height > new_width {
+        border = (new_height - new_width) / 2.0;
+        h_border = border as i32;
+        new_width += (border % 1.0) * 2.0;
+    } else {
+        border = (new_width - new_height) / 2.0;
+        v_border = border as i32;
+        new_height += (border % 1.0) * 2.0;
+    }
+
+    (new_width as i32, new_height as i32, v_border, h_border)
+}
+
+fn get_default_quality() -> VectorOfint {
+    let mut quality: VectorOfint = VectorOfint::with_capacity(2);
+    quality.push(90);
+    quality.push(imgcodecs::IMWRITE_JPEG_QUALITY);
+    quality
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    // Init params
+    // Verify params number
+    if !verify_params(&args) {
+        return;
+    }
+    // Load Path Main Image
     let path: &Path = Path::new(args[1].as_str());
-    let square: i32 = args[2].parse().unwrap();
-    let buffer = read_file(path);
-    let start_total = Instant::now();
+    if !path.exists() || !path.is_file() {
+        println!("{:?} not exist ", path);
+        return;
+    }
+    // Load Sizes to resize
+    let sizes: Vec<f32> = get_sizes(&args, 2);
+    // Read buffer of Image
+    let buffer: Vec<u8> = read_file(path);
+    // Default quality
+    let quality: VectorOfint = get_default_quality();
+
     let mut start = Instant::now();
-    
-    // Load image
-    let mut image = read_image(&buffer[..]).unwrap();
-    let is_alpha = is_alpha_channel(&image).unwrap();
-
-    println!("time to read image from buffer alpha={:?} w={:?} h={:?} time={:?}", 
-            is_alpha, 
-            image.cols(), 
-            image.rows(), 
-            start.elapsed());
-
-    // Resize
-    start = Instant::now();
-    let positions = get_target_size(
-        core::Size {
-            width: image.cols().unwrap(),
-            height: image.rows().unwrap(),
-        },
-        square,
-        square,
-    );
-    image = image_resize(&image, 
-        core::Size { 
-            width: positions.width, 
-            height: positions.height 
-        }).unwrap();
-    println!("time to resize w={:?} h={:?} time={:?}", 
-            image.cols(), 
-            image.rows(), 
-            start.elapsed());
-
-    // Extend
-    if image.cols().unwrap() != image.rows().unwrap() {
+    // Load Image Matrix
+    let mut image: core::Mat = read_image(&buffer[..]).unwrap();
+    let mut all_process: u64 = start.elapsed().as_nanos() as u64;
+    println!("Time to Load main image time={:?}", start.elapsed());
+    // Load channels Image
+    let mut i: i32 = 0;
+    for square in &sizes {
         start = Instant::now();
-        image = expand(&image, positions).unwrap();
-        println!("time to extend time  w={:?} h={:?} time={:?}", 
-                image.cols(), 
-                image.rows(), 
-                start.elapsed());
+        let positions = get_target_new_size(square, &image);
+        image = image_resize(&image, positions.0, positions.1).unwrap();
+
+        if i == 0 {
+            let mut channels = get_channel(&image).unwrap();
+            if channels.len() == 4 {
+                image = change_alpha_channels(&mut channels).unwrap();
+            }
+        }
+
+        if positions.0 != positions.1 {
+            image = fill(&image, positions.2, positions.3).unwrap();
+        }
+
+        let buffer: VectorOfuchar = get_jpeg_buffer(&image, &quality);
+        let duration = start.elapsed();
+        all_process += duration.as_nanos() as u64;
+        println!("Time to create image from buffer w={:?} h={:?} buffer={:?} Bytes time={:?}",
+                 image.cols(),
+                 image.rows(),
+                 buffer.len(),
+                 duration);
+        // only out not sum in time
+        write_file_in_disk(&buffer, path, i.to_string().as_str());
+        i += 1;
     }
 
-    if is_alpha {
-        start = Instant::now();
-        image = change_alpha_channels(&image).unwrap();
-        println!("time to remove alpha time  w={:?} h={:?} time={:?}", 
-                image.cols(), 
-                image.rows(), 
-                start.elapsed());
-    }
-    
-    // Read Buffer
-    start = Instant::now();
-    let buffer = get_jpeg_buffer(&image);
-    println!("time to read buffer size={:?} time={:?}", 
-            buffer.len(), 
-            start.elapsed());
-    println!("total time {:?}", start_total.elapsed());
-    
-    // Only write
-    start = Instant::now();
-    write_file_in_disk(&buffer, path.parent().unwrap().join(format!("out_{}_opencv.jpeg", path
-        .file_name()
-        .unwrap()
-        .to_str()
-        .unwrap())));
-    println!("time to write disk size={:?} time={:?}", 
-            buffer.len(), 
-            start.elapsed());
+    image.release().expect("can't release image");
+    println!("All process {:?} images in time={:?} check files in directory {:?}",
+             sizes.len(),
+             Duration::from_nanos(all_process),
+             path.parent());
 }
