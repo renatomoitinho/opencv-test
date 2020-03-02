@@ -38,7 +38,7 @@ fn write_file_in_disk(buffer: &VectorOfuchar, path: &Path, prefix: &str) -> () {
     _file.flush().expect("no flush");
 }
 
-fn image_resize(image: &core::Mat, width: i32, height: i32) -> Result<core::Mat, opencv::Error> {
+fn image_resize(image: &mut core::Mat, width: i32, height: i32) -> Result<core::Mat, opencv::Error> {
     let mut result = core::Mat::default()?;
     imgproc::resize(
         image,
@@ -50,7 +50,8 @@ fn image_resize(image: &core::Mat, width: i32, height: i32) -> Result<core::Mat,
         0f64,
         0f64,
         imgproc::INTER_AREA,
-    ).expect("");
+    ).expect("Can't resize image");
+    release(image);
     Ok(result)
 }
 
@@ -66,7 +67,7 @@ fn get_jpeg_buffer(image: &core::Mat, quality: &VectorOfint) -> VectorOfuchar {
     dest
 }
 
-fn fill(src: &core::Mat, vertical_border: i32, horizontal_border: i32) -> Result<core::Mat, opencv::Error> {
+fn fill(src: &mut core::Mat, vertical_border: i32, horizontal_border: i32) -> Result<core::Mat, opencv::Error> {
     let mut result = core::Mat::default()?;
     core::copy_make_border(src,
                            &mut result,
@@ -76,6 +77,7 @@ fn fill(src: &core::Mat, vertical_border: i32, horizontal_border: i32) -> Result
                            horizontal_border,
                            core::BORDER_CONSTANT,
                            core::Scalar::all(255.0))?;
+    release(src);
     Ok(result)
 }
 
@@ -115,11 +117,11 @@ fn change_alpha_channels(split: &mut VectorOfMat) -> Result<core::Mat, opencv::E
     alpha.clear();
     colors.clear();
 
-    image.release()?;
-    alpha_image.release()?;
-    bit_not.release()?;
-    bit_and.release()?;
-    bit_not_dest.release()?;
+    release(&mut image);
+    release(&mut alpha_image);
+    release(&mut bit_not);
+    release(&mut bit_and);
+    release(&mut bit_not_dest);
 
     Ok(result)
 }
@@ -180,6 +182,10 @@ fn get_default_quality() -> VectorOfint {
     quality
 }
 
+fn release(image: &mut core::Mat) -> () {
+    image.release().expect("Can't no release image")
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     // Verify params number
@@ -209,7 +215,7 @@ fn main() {
     for square in &sizes {
         start = Instant::now();
         let positions = get_target_new_size(square, &image);
-        image = image_resize(&image, positions.0, positions.1).unwrap();
+        image = image_resize(&mut image, positions.0, positions.1).unwrap();
 
         if i == 0 {
             let mut channels = get_channel(&image).unwrap();
@@ -219,7 +225,7 @@ fn main() {
         }
 
         if positions.0 != positions.1 {
-            image = fill(&image, positions.2, positions.3).unwrap();
+            image = fill(&mut image, positions.2, positions.3).unwrap();
         }
 
         let buffer: VectorOfuchar = get_jpeg_buffer(&image, &quality);
@@ -235,7 +241,7 @@ fn main() {
         i += 1;
     }
 
-    image.release().expect("can't release image");
+    release(&mut image);
     println!("All process {:?} images in time={:?} check files in directory {:?}",
              sizes.len(),
              Duration::from_nanos(all_process),
